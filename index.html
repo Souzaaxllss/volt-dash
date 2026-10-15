@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volt Dash 3D - Personagem Detalhado & Polido</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #020205;
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #hud {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            right: 25px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-card {
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            border-radius: 14px;
+            padding: 12px 28px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hud-card.coins {
+            border-color: rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.25);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(10, 10, 22, 0.94) 0%, rgba(2, 2, 5, 0.99) 100%);
+            backdrop-filter: blur(18px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            color: #fff;
+        }
+
+        .title {
+            font-size: 80px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #00f0ff 0%, #7928ca 50%, #ff007f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 50px rgba(0, 240, 255, 0.5);
+            margin-bottom: 5px;
+            letter-spacing: 4px;
+        }
+
+        .subtitle {
+            color: #777799;
+            font-size: 16px;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%);
+            border: none;
+            color: white;
+            padding: 18px 50px;
+            font-size: 20px;
+            font-weight: 900;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 30px rgba(255, 0, 127, 0.5);
+            margin: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .btn:hover {
+            transform: scale(1.1) translateY(-3px);
+            box-shadow: 0 0 45px rgba(255, 0, 127, 0.8);
+        }
+
+        .skin-selector {
+            display: flex;
+            gap: 25px;
+            margin: 15px 0 35px 0;
+        }
+
+        .skin-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 22px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 145px;
+        }
+
+        .skin-card:hover {
+            border-color: rgba(0, 240, 255, 0.6);
+            background: rgba(0, 240, 255, 0.06);
+        }
+
+        .skin-card.selected {
+            border-color: #00f0ff;
+            background: rgba(0, 240, 255, 0.15);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+            transform: translateY(-6px);
+        }
+
+        .skin-color {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 14px auto;
+        }
+
+        .controls-hint {
+            margin-top: 20px;
+            color: #666688;
+            font-size: 13px;
+            text-align: center;
+            line-height: 1.7;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="hud">
+        <div class="hud-card">PONTOS: <span id="score-val">0</span></div>
+        <div class="hud-card coins">MOEDAS: <span id="coins-val">0</span></div>
+    </div>
+
+    <!-- Menu Principal -->
+    <div id="menu-overlay" class="overlay">
+        <h1 class="title">VOLT DASH</h1>
+        <div class="subtitle">Next-Gen Character Edition</div>
+        
+        <h3>ESCOLHA SEU RUNNER:</h3>
+        <div class="skin-selector">
+            <div class="skin-card selected" onclick="selectSkin('volt', this)">
+                <div class="skin-color" style="background: #00f0ff; box-shadow: 0 0 20px #00f0ff;"></div>
+                <span style="font-weight: 900; color: #fff;">VOLT</span>
+            </div>
+            <div class="skin-card" onclick="selectSkin('blaze', this)">
+                <div class="skin-color" style="background: #ff0055; box-shadow: 0 0 20px #ff0055;"></div>
+                <span style="font-weight: 900; color: #fff;">BLAZE</span>
+            </div>
+            <div class="skin-card" onclick="selectSkin('mecha', this)">
+                <div class="skin-color" style="background: #ffd700; box-shadow: 0 0 20px #ffd700;"></div>
+                <span style="font-weight: 900; color: #fff;">MECHA</span>
+            </div>
+        </div>
+
+        <button class="btn" onclick="startGame()">JOGAR AGORA</button>
+
+        <div class="controls-hint">
+            <b>[A] / [D] / [←] / [→]</b> Movimentação / Cancelamento de Oposição (Volta ao Centro)<br>
+            <b>[W] / [↑]</b> Pular | <b>[S] / [↓]</b> Deslizar (ou Fast Fall instantâneo no ar)
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div id="gameover-overlay" class="overlay hidden">
+        <h1 class="title" style="background: linear-gradient(135deg, #ff0000, #ff5500); -webkit-background-clip: text;">COLISÃO FATAL</h1>
+        <h2 style="margin: 5px 0; font-size: 28px;">Pontuação: <span id="final-score" style="color: #00f0ff;">0</span></h2>
+        <h3 style="margin: 5px 0 35px 0; color: #ffd700;">Moedas: <span id="final-coins">0</span></h3>
+        <button class="btn" onclick="restartGame()">TENTAR NOVAMENTE</button>
+    </div>
+
+    <script>
+        let scene, camera, renderer;
+        let playerGroup;
+        // Referências para animações dos membros do personagem
+        let leftLeg, rightLeg, leftArm, rightArm, torso, head;
+        let matSuit, matAccent, matVisor;
+        let isPlaying = false;
+
+        const LANES = [-3.2, 0, 3.2];
+        let targetLane = 1;
+        let playerX = 0;
+        let playerY = 0;
+
+        let isJumping = false;
+        let isSliding = false;
+        let jumpVelocity = 0;
+        const GRAVITY = -0.0165;
+        const JUMP_FORCE = 0.40;
+        let runTimer = 0;
+
+        const keysDown = {};
+
+        const SKINS = {
+            volt: { suit: 0x00d2ff, accent: 0x0044ff, metalness: 0.85, roughness: 0.15, visor: 0xffffff, emissive: 0x0055ff },
+            blaze: { suit: 0xff0055, accent: 0xaa0022, metalness: 0.80, roughness: 0.20, visor: 0xffff00, emissive: 0xff0055 },
+            mecha: { suit: 0xffaa00, accent: 0x553300, metalness: 0.90, roughness: 0.10, visor: 0x00ffff, emissive: 0xffaa00 }
+        };
+        let selectedSkinKey = 'volt';
+
+        let obstacles = [];
+        let coins = [];
+        let trackSegments = [];
+        let speed = 0.48;
+        let score = 0;
+        let coinCount = 0;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020206);
+            scene.fog = new THREE.FogExp2(0x020206, 0.010);
+
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 350);
+            camera.position.set(0, 5.2, 10.5);
+            camera.lookAt(0, 2, -4);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.3;
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x1a1a33, 1.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xeef5ff, 2.2);
+            dirLight.position.set(15, 35, 12);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 130;
+            dirLight.shadow.camera.left = -20;
+            dirLight.shadow.camera.right = 20;
+            dirLight.shadow.camera.top = 20;
+            dirLight.shadow.camera.bottom = -20;
+            dirLight.shadow.bias = -0.0004;
+            scene.add(dirLight);
+
+            const blueNeon = new THREE.PointLight(0x00f0ff, 2, 50);
+            blueNeon.position.set(-10, 5, -20);
+            scene.add(blueNeon);
+
+            const pinkNeon = new THREE.PointLight(0xff007f, 2, 50);
+            pinkNeon.position.set(10, 5, -20);
+            scene.add(pinkNeon);
+
+            createPolishedCharacter();
+
+            for (let i = 0; i < 14; i++) {
+                createTrackSegment(-i * 35);
+            }
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+
+            animate();
+        }
+
+        // --- MODELO 3D ARTICULADO E POLIDO (NÃO APENAS CUBOS) ---
+        function createPolishedCharacter() {
+            playerGroup = new THREE.Group();
+            const skin = SKINS[selectedSkinKey];
+
+            matSuit = new THREE.MeshStandardMaterial({
+                color: skin.suit,
+                metalness: skin.metalness,
+                roughness: skin.roughness
+            });
+
+            matAccent = new THREE.MeshStandardMaterial({
+                color: skin.accent,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+
+            matVisor = new THREE.MeshStandardMaterial({
+                color: skin.visor,
+                emissive: skin.emissive,
+                emissiveIntensity: 0.9,
+                roughness: 0.1
+            });
+
+            const skinSkin = new THREE.MeshStandardMaterial({
+                color: 0xffdbac, // Tom de pele estilizado
+                roughness: 0.6
+            });
+
+            // 1. Torso com Armadura e Detalhes Anatômicos
+            torso = new THREE.Group();
+            const chestGeo = new THREE.CylinderGeometry(0.32, 0.22, 0.8, 16);
+            const chestMesh = new THREE.Mesh(chestGeo, matSuit);
+            chestMesh.castShadow = true;
+            torso.add(chestMesh);
+
+            // Placa peitoral de alta tecnologia
+            const armorGeo = new THREE.BoxGeometry(0.5, 0.5, 0.25);
+            const armorMesh = new THREE.Mesh(armorGeo, matAccent);
+            armorMesh.position.set(0, 0.05, -0.1);
+            torso.add(armorMesh);
+
+            // Jetpack aerodinâmico nas costas
+            const jetGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.6, 12);
+            const jetMesh = new THREE.Mesh(jetGeo, matAccent);
+            jetMesh.rotation.x = Math.PI / 2;
+            jetMesh.position.set(0, 0.1, 0.22);
+            torso.add(jetMesh);
+
+            torso.position.y = 1.25;
+            playerGroup.add(torso);
+
+            // 2. Cabeça e Capacete Futurista Polido
+            head = new THREE.Group();
+            const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const headMesh = new THREE.Mesh(headGeo, skinSkin);
+            headMesh.castShadow = true;
+            head.add(headMesh);
+
+            // Capacete / Cabelo estilizado
+            const helmetGeo = new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6);
+            const helmetMesh = new THREE.Mesh(helmetGeo, matSuit);
+            helmetMesh.position.set(0, 0.05, 0);
+            head.add(helmetMesh);
+
+            // Viseira de LED brilhante
+            const visorGeo = new THREE.BoxGeometry(0.35, 0.12, 0.25);
+            const visorMesh = new THREE.Mesh(visorGeo, matVisor);
+            visorMesh.position.set(0, 0.02, -0.12);
+            head.add(visorMesh);
+
+            head.position.y = 1.95;
+            playerGroup.add(head);
+
+            // 3. Braços Articulados (Esquerdo e Direito)
+            const armGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.65, 12);
+            
+            leftArm = new THREE.Group();
+            const lArmMesh = new THREE.Mesh(armGeo, matSuit);
+            lArmMesh.position.y = -0.3;
+            lArmMesh.castShadow = true;
+            leftArm.add(lArmMesh);
+            leftArm.position.set(-0.42, 1.55, 0);
+            playerGroup.add(leftArm);
+
+            rightArm = new THREE.Group();
+            const rArmMesh = new THREE.Mesh(armGeo, matSuit);
+            rArmMesh.position.y = -0.3;
+            rArmMesh.castShadow = true;
+            rightArm.add(rArmMesh);
+            rightArm.position.set(0.42, 1.55, 0);
+            playerGroup.add(rightArm);
+
+            // 4. Pernas Articuladas (Esquerda e Direita)
+            const legGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.75, 12);
+
+            leftLeg = new THREE.Group();
+            const lLegMesh = new THREE.Mesh(legGeo, matSuit);
+            lLegMesh.position.y = -0.37;
+            lLegMesh.castShadow = true;
+            leftLeg.add(lLegMesh);
+            leftLeg.position.set(-0.2, 0.8, 0);
+            playerGroup.add(leftLeg);
+
+            rightLeg = new THREE.Group();
+            const rLegMesh = new THREE.Mesh(legGeo, matSuit);
+            rLegMesh.position.y = -0.37;
+            rLegMesh.castShadow = true;
+            rightLeg.add(rLegMesh);
+            rightLeg.position.set(0.2, 0.8, 0);
+            playerGroup.add(rightLeg);
+
+            playerGroup.position.set(LANES[targetLane], 0, 0);
+            scene.add(playerGroup);
+        }
+
+        function updatePlayerSkin() {
+            if (!matSuit) return;
+            const skin = SKINS[selectedSkinKey];
+            matSuit.color.setHex(skin.suit);
+            matSuit.metalness = skin.metalness;
+            matSuit.roughness = skin.roughness;
+            matAccent.color.setHex(skin.accent);
+            matVisor.color.setHex(skin.visor);
+            matVisor.emissive.setHex(skin.emissive);
+        }
+
+        function createTrackSegment(zPosition) {
+            const segment = new THREE.Group();
+
+            const floorGeo = new THREE.BoxGeometry(11, 0.3, 35);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x101018, roughness: 0.8, metalness: 0.15 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.set(0, -0.15, 0);
+            floor.receiveShadow = true;
+            segment.add(floor);
+
+            [-3.2, 0, 3.2].forEach(x => {
+                [-0.4, 0.4].forEach(offset => {
+                    const railGeo = new THREE.BoxGeometry(0.12, 0.16, 35);
+                    const railMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.95, roughness: 0.15 });
+                    const rail = new THREE.Mesh(railGeo, railMat);
+                    rail.position.set(x + offset, 0.05, 0);
+                    segment.add(rail);
+                });
+            });
+
+            [-1.6, 1.6].forEach(x => {
+                const lineGeo = new THREE.BoxGeometry(0.08, 0.06, 35);
+                const lineMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+                const line = new THREE.Mesh(lineGeo, lineMat);
+                line.position.set(x, 0.02, 0);
+                segment.add(line);
+            });
+
+            const buildingMat = new THREE.MeshStandardMaterial({ color: 0x080812, roughness: 0.4, metalness: 0.5 });
+            [-9, 9].forEach(x => {
+                const bHeight = 30 + Math.random() * 20;
+                const bGeo = new THREE.BoxGeometry(6, bHeight, 35);
+                const building = new THREE.Mesh(bGeo, buildingMat);
+                building.position.set(x, bHeight / 2 - 2, 0);
+                segment.add(building);
+            });
+
+            segment.position.z = zPosition;
+            scene.add(segment);
+            trackSegments.push(segment);
+        }
+
+        function spawnObstaclesAndCoins(zPosition) {
+            const laneIndex = Math.floor(Math.random() * 3);
+            const posX = LANES[laneIndex];
+            const type = Math.random();
+
+            if (type < 0.42) {
+                const trainGroup = new THREE.Group();
+                const length = 24;
+
+                const bodyGeo = new THREE.BoxGeometry(2.7, 3.8, length);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xcc1133, metalness: 0.75, roughness: 0.25 });
+                const trainBody = new THREE.Mesh(bodyGeo, bodyMat);
+                trainBody.position.y = 1.9;
+                trainBody.castShadow = true;
+                trainGroup.add(trainBody);
+
+                const roofGeo = new THREE.BoxGeometry(2.8, 0.3, length);
+                const roofMat = new THREE.MeshStandardMaterial({ color: 0x1c1c24, metalness: 0.8, roughness: 0.2 });
+                const roof = new THREE.Mesh(roofGeo, roofMat);
+                roof.position.y = 3.85;
+                trainGroup.add(roof);
+
+                const glassGeo = new THREE.BoxGeometry(2.4, 1.2, 0.1);
+                const glassMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x0055ff, emissiveIntensity: 0.8, roughness: 0.1 });
+                const glass = new THREE.Mesh(glassGeo, glassMat);
+                glass.position.set(0, 2.4, -length / 2 - 0.05);
+                trainGroup.add(glass);
+
+                trainGroup.position.set(posX, 0, zPosition);
+                trainGroup.userData = { type: 'train', lane: laneIndex };
+                scene.add(trainGroup);
+                obstacles.push(trainGroup);
+
+            } else if (type < 0.75) {
+                const barGroup = new THREE.Group();
+                const barGeo = new THREE.BoxGeometry(2.8, 1.3, 0.8);
+                const barMat = new THREE.MeshStandardMaterial({ color: 0xff5500, metalness: 0.6, roughness: 0.3 });
+                const bar = new THREE.Mesh(barGeo, barMat);
+                bar.position.y = 0.65;
+                bar.castShadow = true;
+                barGroup.add(bar);
+
+                const signGeo = new THREE.BoxGeometry(1.8, 0.6, 0.2);
+                const signMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const sign = new THREE.Mesh(signGeo, signMat);
+                sign.position.set(0, 1.0, 0.41);
+                barGroup.add(sign);
+
+                barGroup.position.set(posX, 0, zPosition);
+                barGroup.userData = { type: 'low', lane: laneIndex };
+                scene.add(barGroup);
+                obstacles.push(barGroup);
+
+            } else {
+                const signGroup = new THREE.Group();
+                const poleGeo = new THREE.BoxGeometry(0.3, 3.5, 0.3);
+                const poleMat = new THREE.MeshStandardMaterial({ color: 0x444455, metalness: 0.8 });
+                
+                const leftPole = new THREE.Mesh(poleGeo, poleMat);
+                leftPole.position.set(-1.3, 1.75, 0);
+                signGroup.add(leftPole);
+
+                const rightPole = new THREE.Mesh(poleGeo, poleMat);
+                rightPole.position.set(1.3, 1.75, 0);
+                signGroup.add(rightPole);
+
+                const topBarGeo = new THREE.BoxGeometry(2.9, 0.9, 0.6);
+                const topBarMat = new THREE.MeshStandardMaterial({ color: 0x9900ff, metalness: 0.7, roughness: 0.3 });
+                const topBar = new THREE.Mesh(topBarGeo, topBarMat);
+                topBar.position.set(0, 3.1, 0);
+                topBar.castShadow = true;
+                signGroup.add(topBar);
+
+                signGroup.position.set(posX, 0, zPosition);
+                signGroup.userData = { type: 'high', lane: laneIndex };
+                scene.add(signGroup);
+                obstacles.push(signGroup);
+            }
+
+            const coinLane = (laneIndex + 1) % 3;
+            for (let i = 0; i < 4; i++) {
+                const coinGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.12, 24);
+                const coinMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.95, roughness: 0.1, emissive: 0x443300 });
+                const coin = new THREE.Mesh(coinGeo, coinMat);
+                coin.rotation.x = Math.PI / 2;
+                coin.position.set(LANES[coinLane], 1.2, zPosition - (i * 3.5));
+                coin.castShadow = true;
+                coin.userData = { lane: coinLane };
+                scene.add(coin);
+                coins.push(coin);
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (!isPlaying) return;
+            const key = e.key.toLowerCase();
+            keysDown[key] = true;
+
+            if (e.key === 'ArrowLeft') keysDown['a'] = true;
+            if (e.key === 'ArrowRight') keysDown['d'] = true;
+            if (e.key === 'ArrowUp') keysDown['w'] = true;
+            if (e.key === 'ArrowDown') keysDown['s'] = true;
+
+            processMovementInput();
+        }
+
+        function handleKeyUp(e) {
+            const key = e.key.toLowerCase();
+            keysDown[key] = false;
+
+            if (e.key === 'ArrowLeft') keysDown['a'] = false;
+            if (e.key === 'ArrowRight') keysDown['d'] = false;
+            if (e.key === 'ArrowUp') keysDown['w'] = false;
+            if (e.key === 'ArrowDown') keysDown['s'] = false;
+
+            processMovementInput();
+        }
+
+        function processMovementInput() {
+            if (!isPlaying) return;
+
+            const leftPressed = keysDown['a'] || keysDown['arrowleft'];
+            const rightPressed = keysDown['d'] || keysDown['arrowright'];
+            const upPressed = keysDown['w'] || keysDown['arrowup'];
+            const downPressed = keysDown['s'] || keysDown['arrowdown'];
+
+            if (leftPressed && rightPressed) {
+                targetLane = 1;
+            } else if (leftPressed) {
+                if (targetLane > 0) targetLane--;
+            } else if (rightPressed) {
+                if (targetLane < 2) targetLane++;
+            }
+
+            if (upPressed && !isJumping) {
+                isJumping = true;
+                isSliding = false;
+                jumpVelocity = JUMP_FORCE;
+                playerGroup.scale.set(1, 1, 1);
+            }
+
+            if (downPressed) {
+                if (isJumping) {
+                    jumpVelocity = -0.6;
+                } else if (!isSliding) {
+                    isSliding = true;
+                    playerGroup.scale.set(1, 0.42, 1);
+                    setTimeout(() => {
+                        if (isSliding) {
+                            playerGroup.scale.set(1, 1, 1);
+                            isSliding = false;
+                        }
+                    }, 650);
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isPlaying) {
+                speed += 0.00013;
+                score += Math.floor(speed * 2.8);
+                document.getElementById('score-val').innerText = score;
+
+                const targetX = LANES[targetLane];
+                playerX += (targetX - playerX) * 0.24;
+                playerGroup.position.x = playerX;
+
+                if (isJumping) {
+                    playerY += jumpVelocity;
+                    jumpVelocity += GRAVITY;
+
+                    if (playerY <= 0) {
+                        playerY = 0;
+                        isJumping = false;
+                    }
+                }
+                playerGroup.position.y = playerY;
+
+                // Animações Procedurais Fluidas para os Membros do Personagem
+                runTimer += speed * 1.2;
+                if (!isJumping) {
+                    // Balanço das pernas e braços simulando corrida real
+                    leftLeg.rotation.x = Math.sin(runTimer) * 0.75;
+                    rightLeg.rotation.x = -Math.sin(runTimer) * 0.75;
+                    leftArm.rotation.x = -Math.sin(runTimer) * 0.75;
+                    rightArm.rotation.x = Math.sin(runTimer) * 0.75;
+
+                    torso.rotation.z = Math.sin(runTimer * 2) * 0.04;
+                    head.rotation.y = Math.sin(runTimer) * 0.06;
+                    playerGroup.rotation.z = (targetX - playerX) * 0.14;
+                } else {
+                    // Posição de salto estilizada
+                    leftLeg.rotation.x = -0.3;
+                    rightLeg.rotation.x = 0.5;
+                    leftArm.rotation.x = -1.2;
+                    rightArm.rotation.x = -1.2;
+                    torso.rotation.z = 0;
+                    playerGroup.rotation.z = 0;
+                }
+
+                trackSegments.forEach(segment => {
+                    segment.position.z += speed;
+                    if (segment.position.z > 25) {
+                        segment.position.z -= 420;
+                        spawnObstaclesAndCoins(segment.position.z - 60);
+                    }
+                });
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    const obs = obstacles[i];
+                    obs.position.z += speed;
+
+                    const zDiff = Math.abs(obs.position.z - playerGroup.position.z);
+                    if (zDiff < 1.15 && obs.userData.lane === targetLane) {
+                        let hit = false;
+                        const type = obs.userData.type;
+
+                        if (type === 'train' && playerY < 3.5) hit = true;
+                        if (type === 'low' && playerY < 1.1) hit = true;
+                        if (type === 'high' && !isSliding && playerY < 2.0) hit = true;
+
+                        if (hit) {
+                            gameOver();
+                            return;
+                        }
+                    }
+
+                    if (obs.position.z > 12) {
+                        scene.remove(obs);
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                for (let i = coins.length - 1; i >= 0; i--) {
+                    const coin = coins[i];
+                    coin.position.z += speed;
+                    coin.rotation.z += 0.09;
+
+                    const zDiff = Math.abs(coin.position.z - playerGroup.position.z);
+                    if (zDiff < 1.0 && coin.userData.lane === targetLane && playerY < 2.5) {
+                        coinCount += 1;
+                        document.getElementById('coins-val').innerText = coinCount;
+                        scene.remove(coin);
+                        coins.splice(i, 1);
+                        continue;
+                    }
+
+                    if (coin.position.z > 12) {
+                        scene.remove(coin);
+                        coins.splice(i, 1);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function selectSkin(skinKey, element) {
+            selectedSkinKey = skinKey;
+            document.querySelectorAll('.skin-card').forEach(card => card.classList.remove('selected'));
+            element.classList.add('selected');
+            updatePlayerSkin();
+        }
+
+        function startGame() {
+            document.getElementById('menu-overlay').classList.add('hidden');
+            resetGame();
+            isPlaying = true;
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-coins').innerText = coinCount;
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            document.getElementById('gameover-overlay').classList.add('hidden');
+            resetGame();
+            isPlaying = true;
+        }
+
+        function resetGame() {
+            obstacles.forEach(obs => scene.remove(obs));
+            coins.forEach(coin => scene.remove(coin));
+            obstacles = [];
+            coins = [];
+
+            speed = 0.48;
+            score = 0;
+            coinCount = 0;
+            targetLane = 1;
+            playerX = 0;
+            playerY = 0;
+            isJumping = false;
+            isSliding = false;
+            for (let k in keysDown) keysDown[k] = false;
+
+            document.getElementById('score-val').innerText = '0';
+            document.getElementById('coins-val').innerText = '0';
+
+            playerGroup.position.set(LANES[targetLane], 0, 0);
+            playerGroup.scale.set(1, 1, 1);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
